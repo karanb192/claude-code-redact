@@ -52,7 +52,7 @@ To try it for one session without installing: `claude --plugin-dir ./plugins/red
 |---|---|---|
 | Terminal, interactive, logged in | ran and passed | A session on Claude Code 2.1.288 (Opus 5.5): the prompt echo showed the placeholder, Claude's `Write` call carried the placeholder, the file on disk holds the real key, the session file holds the placeholder in every conversation row and `/redact` reported `restored 1 placeholders` |
 | Headless `claude -p` | ran and passed | The stored user row held the placeholder; the system-prompt snapshot carried the redaction notice; `/redact` answered |
-| Plugin test kit | ran and passed | `claude plugin test`: 60 pass, 0 fail, on the real engine |
+| Plugin test kit | ran and passed | `claude plugin test`: 65 pass, 0 fail, on the real engine |
 | Subagent rows | unverified | The types say `session.append` and `tool.call` fire for subagents with `agentId`; not yet driven live |
 | `/reload-plugins` | unverified | Designed for: the value map lives in `$.state`, which survives a reload |
 | SDK, VS Code panel, Desktop, cloud sessions | unverified | Same hooks, no drawing; not yet run there |
