@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-code-redact",
+  "description": "A Claude Code mod that redacts secrets and PII before Claude reads them and before the transcript stores them.",
+  "owner": {
+    "name": "Karan Bansal",
+    "url": "https://github.com/karanb192"
+  },
+  "plugins": [
+    {
+      "name": "redact",
+      "source": "./plugins/redact",
+      "description": "Redacts secrets and PII from every row Claude Code stores: prompts, file reads, shell output, MCP results, attachments. Placeholders are restored only inside Edit and Write arguments, so file edits still work. Reach L0: no network, no processes, no files.",
+      "category": "security",
+      "tags": ["mods", "security", "secrets", "pii", "redaction", "dlp"]
+    }
+  ]
+}

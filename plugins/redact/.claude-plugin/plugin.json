@@ -1,0 +1,31 @@
+{
+  "name": "redact",
+  "version": "0.1.0",
+  "description": "Redacts secrets and PII from every row Claude Code stores, before the model reads it and before the transcript keeps it. Reach L0: no network, no processes, no files.",
+  "author": { "name": "Karan Bansal", "url": "https://github.com/karanb192" },
+  "homepage": "https://redact.aidojo.si",
+  "repository": "https://github.com/karanb192/claude-code-redact",
+  "license": "MIT",
+  "keywords": ["mods", "security", "secrets", "pii", "redaction", "dlp"],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "pii": {
+      "type": "boolean",
+      "title": "Redact PII",
+      "description": "Also hide email addresses, phone numbers, payment cards, SSNs, Aadhaar, PAN and IBAN. Secrets are always hidden.",
+      "default": false
+    },
+    "quiet": {
+      "type": "boolean",
+      "title": "Quiet",
+      "description": "Hide the transcript line that reports what was redacted. /redact still shows the session total.",
+      "default": false
+    },
+    "off": {
+      "type": "string",
+      "title": "Rules off",
+      "description": "Comma-separated rule ids to skip, for example generic-assignment,email. Ids are listed in RULES.md.",
+      "default": ""
+    }
+  }
+}
