@@ -144,7 +144,7 @@ Stored under `pluginConfigs` in settings. A change reloads the mod.
 - **Pin a version.** Installed copies are cached by `version`. Review a release, then pin it. Upgrade on purpose.
 - **Set the policy in `pluginConfigs`.** Turn on `pii` if your code and logs carry customer data. Use `off` to drop a rule that fires on your own fixtures, by id.
 - **Know the limit of self-install.** A developer can disable any plugin they installed themselves. Org-wide enforcement needs managed settings. See Anthropic's [plugin admin docs](https://code.claude.com/docs/en/plugins/mods/admin).
-- **Read the threat model before rollout.** It is five lines, above. The hook code is [`hooks/register.ts`](plugins/redact/hooks/register.ts) (127 lines) and [`hooks/scrub.ts`](plugins/redact/hooks/scrub.ts) (98 lines). The rules live in [`hooks/rules.ts`](plugins/redact/hooks/rules.ts).
+- **Read the threat model before rollout.** It is five lines, above. The hook code is [`hooks/register.ts`](plugins/redact/hooks/register.ts) (about 130 lines) and [`hooks/scrub.ts`](plugins/redact/hooks/scrub.ts) (under 100 lines). The rules live in [`hooks/rules.ts`](plugins/redact/hooks/rules.ts).
 
 ## Uninstall
 
