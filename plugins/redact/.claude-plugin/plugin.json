@@ -24,7 +24,7 @@
     "off": {
       "type": "string",
       "title": "Rules off",
-      "description": "Comma-separated rule ids to skip, for example generic-assignment,email. Ids are listed in RULES.md.",
+      "description": "Comma-separated rule ids to skip, for example generic-secret,email. Ids are listed in RULES.md.",
       "default": ""
     }
   }
