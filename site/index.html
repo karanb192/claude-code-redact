@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>redact for Claude Code</title>
+<meta name="description" content="A Claude Code mod that swaps secrets and opt-in PII for placeholders before the model reads them and before the session file keeps them. No network, no processes, no model call.">
+<style>
+:root {
+  --bg: #FAF9F5;
+  --bg-alt: #F0EEE6;
+  --text: #141413;
+  --muted: #5E5D59;
+  --faint: #87867F;
+  --accent: #D97757;
+  --accent-hover: #CC785C;
+  --kraft: #D4A27F;
+  --manilla: #EBDBBC;
+  --panel: #F0EEE6;
+  --panel-warm: #F5ECDA;
+  --line: #E3DFD3;
+  --code-bg: #141413;
+  --code-text: #F0EEE6;
+  --code-dim: #87867F;
+  --on-accent: #FAF9F5;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141413;
+    --bg-alt: #1D1D1B;
+    --text: #FAF9F5;
+    --muted: #C9C6BC;
+    --faint: #87867F;
+    --panel: #1F1E1C;
+    --panel-warm: #2A241D;
+    --line: #34332F;
+    --code-bg: #0C0C0B;
+    --code-text: #F0EEE6;
+    --code-dim: #87867F;
+    --manilla: #3A3024;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+a:hover { color: var(--accent-hover); }
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 16px; }
+section { padding: 56px 0; }
+section + section { border-top: 1px solid var(--line); }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(2.5rem, 8vw, 4rem); }
+h2 { font-size: clamp(1.6rem, 4.5vw, 2.1rem); margin-bottom: 20px; }
+h3 { font-size: 1.25rem; margin-bottom: 8px; }
+p { margin: 0 0 14px; }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--panel); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+.small { font-size: 0.9rem; }
+
+header.top { padding: 18px 0; }
+header.top .wrap { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.brand { font-family: var(--serif); font-weight: 600; font-size: 1.1rem; text-decoration: none; }
+.brand span { color: var(--accent); }
+.nav { display: flex; gap: 18px; font-size: 0.95rem; }
+.nav a { text-decoration: none; color: var(--muted); }
+.nav a:hover { color: var(--accent-hover); }
+
+.hero { padding-top: 32px; }
+.eyebrow { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); margin-bottom: 14px; }
+.lede { font-size: clamp(1.1rem, 3vw, 1.3rem); color: var(--muted); max-width: 640px; margin: 18px 0 28px; }
+.lede strong { color: var(--text); font-weight: 600; }
+
+.copybox {
+  display: flex; align-items: stretch;
+  background: var(--code-bg); color: var(--code-text);
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--code-bg);
+}
+.copybox pre { margin: 0; padding: 16px; flex: 1; min-width: 0; overflow-x: auto; font-family: var(--mono); font-size: 0.86rem; line-height: 1.7; }
+.copybox pre .p { color: var(--accent); user-select: none; }
+.copy {
+  flex: none; border: 0; cursor: pointer;
+  background: var(--accent); color: var(--on-accent);
+  font: 600 0.95rem var(--sans); padding: 0 22px;
+}
+.copy:hover { background: var(--accent-hover); }
+.copy:focus-visible { outline: 3px solid var(--kraft); outline-offset: -3px; }
+.after-install { margin: 10px 0 0; font-size: 0.92rem; color: var(--muted); }
+
+.example { margin-top: 32px; }
+.example .label { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
+.rows { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+.row { display: grid; grid-template-columns: 92px 1fr; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row .k { padding: 12px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); border-right: 1px solid var(--line); }
+.row .v { padding: 12px; font-family: var(--mono); font-size: 0.86rem; overflow-wrap: anywhere; min-width: 0; }
+.row.after { background: var(--panel-warm); }
+.ph { color: var(--accent); font-weight: 600; }
+.mask { color: var(--faint); }
+
+.cards { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.card { background: var(--panel); border-radius: 10px; padding: 22px; border-top: 3px solid var(--kraft); }
+.card p { color: var(--muted); margin: 0; }
+.card code, .group.pii code, .teams code { background: var(--bg); }
+.card .note { margin-top: 10px; font-size: 0.86rem; color: var(--faint); }
+
+.catch { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.group { border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.group.pii { background: var(--panel); }
+.group h3 { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tag { font-family: var(--sans); font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--manilla); color: var(--text); }
+.group.secrets .tag { background: var(--accent); color: var(--on-accent); }
+.group ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); }
+.group li { margin: 3px 0; }
+
+.nots { list-style: none; padding: 0; margin: 0; }
+.nots li { padding: 12px 0 12px 28px; border-top: 1px solid var(--line); position: relative; color: var(--muted); }
+.nots li:first-child { border-top: 0; }
+.nots li::before { content: ""; position: absolute; left: 4px; top: 22px; width: 12px; height: 2px; background: var(--faint); }
+.nots li strong { color: var(--text); font-weight: 600; }
+
+.teams { background: var(--bg-alt); border-radius: 12px; padding: 24px; }
+.teams ul { margin: 0; padding-left: 18px; color: var(--muted); }
+.teams li { margin: 6px 0; }
+
+.cta { display: inline-block; margin-top: 18px; color: var(--text); text-decoration: none; font-weight: 600; padding: 11px 19px; border-radius: 8px; border: 1px solid var(--kraft); }
+.cta:hover { border-color: var(--accent-hover); color: var(--accent-hover); }
+
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 0.92rem; color: var(--muted); }
+footer .links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+footer a { text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+@media (min-width: 720px) {
+  section { padding: 72px 0; }
+  .cards { grid-template-columns: repeat(3, 1fr); }
+  .catch { grid-template-columns: 3fr 2fr; }
+  .row { grid-template-columns: 110px 1fr; }
+}
+@media (max-width: 480px) {
+  .nav { gap: 12px; font-size: 0.88rem; }
+  .copybox { flex-direction: column; }
+  .copy { padding: 12px; }
+  .copybox pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.8rem; padding-left: 30px; text-indent: -14px; }
+  .row { grid-template-columns: 72px 1fr; }
+  .row .k { padding: 12px 8px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">redact<span>.</span></a>
+    <nav class="nav">
+      <a href="#catches">Rules</a>
+      <a href="#limits">Limits</a>
+      <a href="https://github.com/karanb192/claude-code-redact">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">A Claude Code mod</div>
+    <h1>redact</h1>
+    <p class="lede">Paste a key into Claude Code and it goes to the model and into a session file on disk. <strong>redact swaps it for a placeholder inside Claude Code first, with no network reach.</strong></p>
+
+    <div class="copybox">
+      <pre id="install"><span class="p">$ </span>claude plugin marketplace add karanb192/claude-code-redact
+<span class="p">$ </span>claude plugin install redact@claude-code-redact</pre>
+      <button class="copy" type="button" id="copy-btn" aria-label="Copy install commands">Copy</button>
+    </div>
+    <p class="after-install">Then run <code>/reload-plugins</code> in an open session. Needs Claude Code 2.1.287 or later.</p>
+
+    <div class="example">
+      <div class="label">A headless <code>claude -p</code> run on Claude Code 2.1.288. The prompt held a fake AWS access key id.</div>
+      <div class="rows">
+        <div class="row"><div class="k">Typed</div><div class="v">my aws key is <span class="mask">AKIA****************</span> please remember it</div></div>
+        <div class="row after"><div class="k">Stored</div><div class="v">my aws key is <span class="ph">[REDACTED:AWS_KEY#20fae26c]</span> please remember it</div></div>
+      </div>
+      <p class="small muted" style="margin-top:8px">"Stored" is the user row as written to the session file. The key is masked here on the page. The stored system-prompt snapshot carried the redaction notice.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>How it keeps a secret in</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Nothing leaves the machine</h3>
+        <p>Reach L0. It runs no process, makes no network call and asks no model. Detection is regex plus checksums. The value map lives in session memory and is gone at exit.</p>
+      </div>
+      <div class="card">
+        <h3>Edits get the real value</h3>
+        <p>Placeholders are swapped back only inside <code>Edit</code>, <code>Write</code> and <code>NotebookEdit</code> arguments, so an edit to a line that held a key still matches the file. <code>Bash</code> never gets the real value.</p>
+        <p class="note">Kit tests cover the argument rewrite. A live edit in a logged-in session has not been run yet.</p>
+      </div>
+      <div class="card">
+        <h3>The transcript is clean too</h3>
+        <p>It rewrites rows at <code>session.append</code>, the one event that sees every row before it is stored and sent. File reads, shell output, MCP results and Claude's own replies reach the session file as placeholders.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="catches">
+  <div class="wrap">
+    <h2>What it catches</h2>
+    <p class="muted">30 rules. Each one has a fake example and a public source in <a href="https://github.com/karanb192/claude-code-redact/blob/main/plugins/redact/RULES.md">RULES.md</a>. Any rule can be switched off by id.</p>
+    <div class="catch">
+      <div class="group secrets">
+        <h3>Secrets <span class="tag">always on, 23 rules</span></h3>
+        <ul>
+          <li>AWS access key ids and secret access keys</li>
+          <li>GitHub, GitLab, npm, PyPI and Hugging Face tokens</li>
+          <li>Slack tokens and webhook URLs</li>
+          <li>Stripe live keys, SendGrid and Twilio keys</li>
+          <li>Google API keys and OAuth client secrets</li>
+          <li>Anthropic and OpenAI keys</li>
+          <li>Azure storage account keys</li>
+          <li>JWTs (header must decode to JSON with <code>alg</code>)</li>
+          <li>PEM private key blocks</li>
+          <li>Database URLs that carry a password</li>
+          <li><code>Authorization</code> header values</li>
+          <li>Generic <code>password=</code>, <code>api_key=</code> style values with enough entropy</li>
+        </ul>
+      </div>
+      <div class="group pii">
+        <h3>PII <span class="tag">opt-in, 7 rules</span></h3>
+        <ul>
+          <li>Email addresses</li>
+          <li>Payment cards (Luhn check)</li>
+          <li>Phone numbers (E.164 and common forms)</li>
+          <li>US SSN</li>
+          <li>IBAN (mod-97 check)</li>
+          <li>India Aadhaar (Verhoeff check)</li>
+          <li>India PAN</li>
+        </ul>
+        <p class="small muted" style="margin:12px 0 0">Set <code>pii</code> to <code>true</code> to turn these on.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="wrap">
+    <h2>What it does not do</h2>
+    <ul class="nots">
+      <li><strong>Two bookkeeping records keep the typed prompt.</strong> The <code>queue-operation</code> record and a command's <code>args</code> stamp are stored as made. In the headless run both still held the typed text. Neither is sent to the model.</li>
+      <li><strong>Unknown formats pass.</strong> A secret the rules do not know stays visible. <code>password=hunter2</code> is caught, <code>token=abc</code> is not.</li>
+      <li><strong>Split or partial secrets pass.</strong> A key across two rows, or only its last four characters, is not caught.</li>
+      <li><strong>Images are not scanned.</strong> A screenshot of a key goes through.</li>
+      <li><strong>No search by value.</strong> <code>Grep</code> for a placeholder finds nothing. Search by the line around it.</li>
+      <li><strong>Plugins loaded ahead of it see the raw row.</strong></li>
+      <li><strong>The screen may show the raw row</strong> just before its rewrite. The model and the session file never see that form.</li>
+      <li><strong>No drawn notice outside the terminal.</strong> In <code>claude -p</code>, the SDK, the VS Code panel and cloud sessions the notice arrives as <code>ui_log</code>.</li>
+      <li><strong>It is not a permission rule.</strong> A determined prompt can describe a secret in words the rules do not match.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="teams">
+      <h2>For teams</h2>
+      <ul>
+        <li>Ship it from your managed marketplace and pin a reviewed version.</li>
+        <li>Set <code>pii</code> and <code>off</code> under <code>pluginConfigs</code> in settings.</li>
+        <li>Users can disable a plugin they installed themselves. Org-wide enforcement needs managed settings: see the <a href="https://code.claude.com/docs/en/plugins/mods/admin">plugin admin docs</a>.</li>
+        <li>Read the five-line threat model and the hook code before rollout: 225 lines, plus the rule file.</li>
+      </ul>
+      <a class="cta" href="https://github.com/karanb192/claude-code-redact">Read the code on GitHub</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="links">
+      <a href="https://github.com/karanb192/claude-code-redact">GitHub</a>
+      <a href="https://code.claude.com/docs/en/plugins/mods/overview">Claude Code mods docs</a>
+      <span>MIT license</span>
+      <span>Built with mod-builder from <a href="https://github.com/karanb192/claude-code-mods">claude-code-mods</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var btn = document.getElementById('copy-btn');
+  var text = 'claude plugin marketplace add karanb192/claude-code-redact\nclaude plugin install redact@claude-code-redact';
+  function done(ok) {
+    btn.textContent = ok ? 'Copied' : 'Press Cmd+C';
+    setTimeout(function () { btn.textContent = 'Copy'; }, 1800);
+  }
+  function fallback() {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    done(ok);
+  }
+  btn.addEventListener('click', function () {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+    } else {
+      fallback();
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -65,8 +65,9 @@ export const register: Register = (on, options) => {
     return started
   })
 
-  // The typed prompt is scrubbed here, before the engine queues it, so the
-  // queue record, the on-screen echo and the command args never hold the value.
+  // The typed prompt is scrubbed before the turn starts, so the on-screen echo
+  // and the command args hold the placeholder. The engine's queue record is
+  // written earlier in the headless path and is out of reach (see README).
   on('prompt.submit', async ($, e, next) => {
     const s = await ensureSalt($)
     const r = redactText(e.text, s, cfg)
