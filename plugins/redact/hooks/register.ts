@@ -48,7 +48,7 @@ async function remember($: EngineInterface, pairs: ReadonlyArray<readonly [strin
     for (const [label, n] of Object.entries(found)) total[label] = (total[label] ?? 0) + n
     return total
   })
-  if (!cfg.quiet) $.ui.log(`redact: hid ${describe(found)} in ${place}`)
+  if (!cfg.quiet) $.ui.log(`hid ${describe(found)} in ${place}`)
 }
 
 function where(e: SessionAppendInput): string {
@@ -84,7 +84,7 @@ export const register: Register = (on, options) => {
     return next({ ...e, message: { ...e.message, content: r.blocks } })
   }).catch(($, e, next) => {
     if (next.called) return next(e)
-    $.ui.log(`redact: scanning failed, so this row was withheld from the model (${where(e)})`)
+    $.ui.log(`scanning failed, so this row was withheld from the model (${where(e)})`)
     return next({ ...e, message: { ...e.message, content: withhold(e.message.content) } })
   })
 
@@ -122,7 +122,7 @@ export const register: Register = (on, options) => {
     const k = await read($, restored)
     const total = Object.values(c).reduce((a, b) => a + b, 0)
     const rules = cfg.pii ? 'secrets and PII' : 'secrets only (set pii to true for email, phone, cards, national ids)'
-    if (total === 0) return { text: `redact: nothing hidden yet this session. Scanning ${rules}.` }
-    return { text: `redact: hid ${total} values this session (${describe(c)}); restored ${k} placeholders inside Edit, Write and NotebookEdit arguments. Scanning ${rules}.` }
+    if (total === 0) return { text: `nothing hidden yet this session. Scanning ${rules}.` }
+    return { text: `hid ${total} values this session (${describe(c)}); restored ${k} placeholders inside Edit, Write and NotebookEdit arguments. Scanning ${rules}.` }
   })
 }

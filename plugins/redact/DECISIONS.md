@@ -12,9 +12,11 @@
 - No `turn.complete` line and no `$.ui.notice`. Rejected: a per-turn summary, because the per-row `$.ui.log` line already says what was hidden and where; `$.ui.notice` is removed when the tool call resolves, which is before the result row is appended.
 - The scrub logic is a pure module (`hooks/scrub.ts`) tested directly. Rejected: testing it through `session.append` in the kit, because on Claude Code 2.1.288 a test stub for `session.append` cannot answer (every answer must follow a `next`, and nothing is beneath the stub).
 
+## Verified since
+- The `$.ui.log` line draws in the terminal transcript as `redact: hid 1 AWS_KEY in your prompt`; the engine prefixes the plugin name, so the mod's own text carries none.
+- Live interactive session on 2.1.288: the prompt echo showed the placeholder, Claude's `Write` call carried it, the file on disk holds the real value, `/redact` reported one restoration. The session file held the placeholder in every conversation row; the only raw copy was the `toolUseResult` record of the `Write` (the file content as written), which the engine stores as made.
+- An interactive session writes no `queue-operation` record at all; only the headless `-p` path does, and there it is written before `prompt.submit` runs.
+
 ## Assumptions not verified
-- In an interactive session, `prompt.submit` runs before the `queue-operation` record is written, so that record holds the placeholder. In the headless `-p` path it is written first and holds the typed text. If wrong: the typed prompt stays raw in that one bookkeeping record (never sent to the model). How to check: type a prompt with a fake key in an interactive session and grep the session file for `queue-operation`.
 - Subagent rows and subagent `Edit` calls pass through the same hooks with `agentId` set, as the types say. If wrong: a subagent could read a raw secret. How to check: run a subagent that reads a file with a fake key and grep its rows in the session file.
-- The restore path works against a real file edit by the model. The kit proves the argument rewrite; a live run with a logged-in session has not been done. How to check: ask Claude to move a key from `.env` to another file and confirm the new file holds the real value.
 - `$.state` survives `/reload-plugins`, so placeholders made before a reload still restore. If wrong: an edit using an older placeholder fails and Claude re-reads the file. How to check: hide a value, run `/reload-plugins`, ask for an edit of that line.
-- The `$.ui.log` line draws in the terminal transcript. The `-p` path receives it as `ui_log`. If wrong: the person loses the per-row notice; `/redact` still reports totals. How to check: an interactive session with a fake key in the prompt.

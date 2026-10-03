@@ -2,7 +2,7 @@
 
 Redacts secrets and PII from every row Claude Code stores, before the model reads it and before the transcript keeps it, and puts the real value back only inside `Edit`, `Write` and `NotebookEdit` arguments so file edits still work.
 
-Built on Claude Code 2.1.288. Proven on 2.1.288 (stages: validate, load, typecheck, test, command, isolation). Requires Claude Code 2.1.287 or later.
+Built on Claude Code 2.1.288. Proven on 2.1.288 (stages: validate, load, typecheck, test, command, isolation, plus a live interactive session with a real file write). Requires Claude Code 2.1.287 or later.
 
 ## What it can reach
 
@@ -32,7 +32,23 @@ Threat model for redact (reach L0, draws and remembers)
 
 The hash is FNV-1a over a per-session salt plus the value, so the same secret gets the same placeholder across rows, edits and compaction summaries, and a placeholder from another session means nothing here.
 
-Detection is deterministic: 23 secret rules and 7 PII rules, regex plus checksums (Luhn, Verhoeff, IBAN mod-97, JWT header decode), no model call. The list with sources is in `RULES.md`.
+Detection is deterministic: 24 secret rules and 7 PII rules, regex plus checksums (Luhn, Verhoeff, IBAN mod-97, JWT header decode), no model call. The list with sources is in `RULES.md`.
+
+## False positives on ordinary code
+
+A redactor that fires on normal work gets uninstalled in a week, so the number to defend is the false-positive count, not the catch count. `tools/fp-corpus.mjs` shallow-fetches 11 public repositories at pinned commits (lockfiles, Go sums, Terraform, Markdown, minified JS, JWT and PEM test vectors, a dotenv test suite) and scans every text file with the secret rules:
+
+| Files scanned | Secret-rule hits | Real test keys and vectors | Fake fixtures | False positives |
+|---|---|---|---|---|
+| 42,836 | 68 | 60 | 8 | 0 |
+
+Every hit was opened at its line and labelled by hand; the labels live in `tools/fp-corpus-labels.json`, so a rerun that produces a new hit shows it as unreviewed instead of counting it. Rerun it yourself:
+
+```
+node tools/fp-corpus.mjs
+```
+
+The full per-hit list is in `tools/fp-corpus-results.md` at the repo root. The 60 real-shaped hits are complete private keys and signed JWTs published as test vectors, and demo database URLs with a password; a redactor should hide those. The PII rules, off by default, hit 650 times on the same corpus (mostly email addresses in docs), which is why they are opt-in.
 
 ## Install
 
@@ -55,15 +71,16 @@ Stored under `pluginConfigs` in settings; a change reloads the mod.
 
 ## Limitations
 
-- Two engine bookkeeping records in the session file are stored as made and can keep the typed prompt: the `queue-operation` record written at enqueue, and a command's `args` stamp. Neither is sent to the model. In the headless `-p` path the queue record is written before `prompt.submit` runs.
-- A secret the rules do not know stays visible. Generic `key=value` detection needs the value to look like a secret (length and entropy); `password=hunter2` is caught, `token=abc` is not.
-- A secret split across two rows, or shown partially (the last four characters), is not caught.
-- Images are not scanned. A screenshot of a key goes through.
-- Claude cannot search for a secret by value: `Grep` for a placeholder finds nothing. Search by the line around it.
-- Plugins loaded ahead of this one see the row before it is rewritten.
-- The screen may show a row just before its rewrite; the model and the session file never see that form.
-- Nothing is drawn in `claude -p`, the SDK, the VS Code panel or cloud sessions; the `redact: hid ...` line arrives as `ui_log` there, and `/redact` works everywhere.
-- A pattern guard is not a permission rule. A determined prompt can describe a secret in words the rules do not match.
+- **Three host bookkeeping records are stored as made and can hold a raw value.** The engine lets a mod rewrite the conversation rows the model reads, not the records around them. (a) The `toolUseResult` record of a `Write`, `Edit` or `NotebookEdit` call keeps the file content as written, so a value restored into a file lands there in clear. (b) A slash command's `args` stamp keeps the typed arguments. (c) In headless `claude -p` only, the `queue-operation` record keeps the typed prompt, because it is written before `prompt.submit` runs; an interactive session writes no such record. None of the three is sent to the model.
+- **`tool_use` blocks are not rewritable.** The engine puts the model's own tool call blocks back as made; a mod may rewrite text blocks and tool results only. The model only ever sees placeholders, so a raw value in a tool call means it came from text the rules missed.
+- **A secret the rules do not know stays visible.** Generic `key=value` detection needs the value to look like a secret (length and entropy): `password=hunter2` is caught, `token=abc` is not.
+- **A secret split across two rows, or shown partially** (the last four characters), is not caught.
+- **Images are not scanned.** A screenshot of a key goes through.
+- **Claude cannot search for a secret by value.** `Grep` for a placeholder finds nothing. Search by the line around it.
+- **Plugins loaded ahead of this one** see the row before it is rewritten.
+- **The screen may show a row just before its rewrite.** The model and the session file never see that form.
+- **Nothing is drawn in `claude -p`, the SDK, the VS Code panel or cloud sessions.** The `redact: hid ...` line arrives as `ui_log` there. `/redact` works everywhere.
+- **A pattern guard is not a permission rule.** A determined prompt can describe a secret in words the rules do not match.
 
 ## Uninstall
 
