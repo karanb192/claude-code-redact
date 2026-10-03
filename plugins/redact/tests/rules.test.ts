@@ -104,6 +104,45 @@ const PEMS = [
   pem('EC ', 'MHcCAQEEIFakeFakeFakeKeyMaterialForTestsOnly0123456789oAoGCCqGSM49'),
   cat('-----BEGIN PGP ', 'PRIVATE KEY BLOCK-----\n\nlQOYBGFakeTestKeyBlockNotRealAtAll0123456789abcdef\n=AbCd\n-----END PGP ', 'PRIVATE KEY BLOCK-----'),
 ] as const
+// random bytes, base64 encoded: shaped like key body lines, decode to nothing
+const BODY = [
+  'Cwt6LdVeAeNtMwcg7fRuJeOEthYUxl+wh4mkBtvO3jeUrw6g/pHKeeCB9SvYEYgX',
+  '2XRFjCcxb2tTNclcj5+Awuv/ipA28sjg3IidDsJkO4EZ0M8p3rO6SkO/yxpz79Mp',
+  'HyXFxEpnRzuEyKVCHLmrNOd9GUjm8me/zYZ+RHB5YE16DafnE9UIkFndQyUYyD9A',
+  'viGE2jtGDOqocVvXf7VvHLl3tpKIB+p8hf6CiGv/uvUrdlJEeRoSuFctewnhJXtu',
+  'Ic518be1I790YaKVaf0gfqFex/mBykHUdfbQSUzN+evjihRwMABG2U0zdsKdAIh1',
+  'k4iArmiIAdr6UnWhHa2gH/vJyXDmdiDdZQZrZopClQ+Pg7e60BPGaz1dKx9Aabs8',
+  'sjr/Cjgt0RnL0t6cEeSt8IfEDlbL8ciem3KvIJyTHO8UhYdDwJKUg2hxgJgBVfaj',
+  '9nFanOPHPV8QKVqDlK/d+WKf46gmTUadKFa3B3EkndU9u1wL9D8V6RUkRlhsWF2b',
+  'fCmL0O+VBHaA/x2aujB23ZHPitel+1fD8U8Ymf6KW3EMm3hPYohQizodYPiKwxBR',
+  'T7x0W6hEG71ToPfYF+xcpwKxbc9zr0kya9rgeneHnojD5P89TH1HjyXLSz84iSgD',
+] as const
+// a body past the old 16384 character cap, as in a large PGP export
+const LONG_BODY = Array.from({ length: 300 }, (_, i) => BODY[i % BODY.length]).join('\n')
+const LONG_PGP = cat('-----BEGIN PGP ', 'PRIVATE KEY BLOCK-----\n\n', LONG_BODY, '\n=AbCd\n-----END PGP ', 'PRIVATE KEY BLOCK-----')
+const head = (kind: string, sep: string, ...lines: string[]): string =>
+  cat('-----BEGIN ', kind, 'PRIVATE KEY-----', ...lines.map((l) => sep + l))
+const TRUNCATED = [
+  head('RSA ', '\n', BODY[0], BODY[1], BODY[2]),
+  head('RSA ', '\n', 'Proc-Type: 4,ENCRYPTED', 'DEK-Info: AES-256-CBC,0F9D4DAE9EC28C165D631F076B265F06', '', BODY[3], BODY[4]),
+  head('', '\\n', BODY[5], BODY[6], BODY[7]),
+  head('OPENSSH ', '\r\n', BODY[8], BODY[9]),
+  head('EC ', '\n    ', BODY[1], BODY[3]),
+  head('PGP ', '\n', 'Version: GnuPG v2', '', BODY[2], BODY[4]).replace('KEY-----', 'KEY BLOCK-----'),
+] as const
+
+const B64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+// what `base64` or `base64 -w0` prints; url gives the unpadded url-safe form
+const b64 = (s: string, url = false): string => {
+  let out = ''
+  for (let i = 0; i < s.length; i += 3) {
+    const n = (s.charCodeAt(i) << 16) | ((i + 1 < s.length ? s.charCodeAt(i + 1) : 0) << 8) | (i + 2 < s.length ? s.charCodeAt(i + 2) : 0)
+    const quad = [18, 12, 6, 0].map((shift) => B64_ALPHABET.charAt((n >> shift) & 63))
+    const keep = i + 2 < s.length ? 4 : i + 1 < s.length ? 3 : 2
+    out += quad.slice(0, keep).join('') + (url ? '' : '='.repeat(4 - keep))
+  }
+  return url ? out.replace(/\+/g, '-').replace(/\//g, '_') : out
+}
 const DB_URLS = [
   cat('postgres', '://admin:S3cr3tPa55w0rd', '@db.internal.test:5432/app'),
   cat('mongodb+srv', '://svc_user:Xk9mP2vL7qR4', '@cluster0.abcde.mongodb.net/prod?retryWrites=true'),
@@ -391,11 +430,31 @@ const SECRET_CASES: Case[] = [
       { text: `"${PEMS[1]}"`, value: PEMS[1] },
       { text: `${PEMS[2]}`, value: PEMS[2] },
       { text: `gpg export\n${PEMS[3]}\ndone`, value: PEMS[3] },
+      { text: `gpg --export-secret-keys --armor\n${LONG_PGP}\n`, value: LONG_PGP },
     ],
     negatives: [
       '-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFakePublicKeyMaterial\n-----END PUBLIC KEY-----',
       '-----BEGIN CERTIFICATE-----\nMIIBszCCAVmgAwIBAgIUFakeCertificateBody0123\n-----END CERTIFICATE-----',
       cat('-----BEGIN RSA ', 'PRIVATE KEY----- truncated, no end marker'),
+    ],
+  },
+  {
+    id: 'private-key-truncated',
+    label: 'PRIVATE_KEY',
+    positives: [
+      { text: `$ head -4 id_rsa\n${TRUNCATED[0]}\n$ `, value: TRUNCATED[0] },
+      { text: `${TRUNCATED[1]}\n... (40 more lines)`, value: TRUNCATED[1] },
+      { text: `{"type": "service_account", "private_key": "${TRUNCATED[2]}`, value: TRUNCATED[2] },
+      { text: `${TRUNCATED[3]}\r\n`, value: TRUNCATED[3] },
+      { text: `tls:\n  key: |\n    ${TRUNCATED[4]}\n  cert: pending`, value: TRUNCATED[4] },
+      { text: `${TRUNCATED[5]}`, value: TRUNCATED[5] },
+    ],
+    negatives: [
+      cat('-----BEGIN RSA ', 'PRIVATE KEY-----\n', BODY[0], '\n(output truncated)'),
+      cat('-----BEGIN PUBLIC KEY-----\n', BODY[1], '\n', BODY[2]),
+      cat('-----BEGIN CERTIFICATE-----\n', BODY[3], '\n', BODY[4]),
+      cat('-----BEGIN ', 'PRIVATE KEY-----\npaste the rest of the key here\nand keep the END line'),
+      cat('-----BEGIN ', 'PRIVATE KEY-----\nMIIE\nshort\nlines'),
     ],
   },
   {
@@ -412,6 +471,12 @@ const SECRET_CASES: Case[] = [
       'postgres://localhost:5432/app',
       'mongodb://${DB_USER}:${DB_PASS}@mongo.test/db',
       'mysql://root:<password>@127.0.0.1:3306/app',
+      'return sql.Open("postgres", fmt.Sprintf("postgres://postgres:%s@db:5432/example?sslmode=disable", string(bin)))',
+      'dsn := fmt.Sprintf("mysql://app:%d@db.test:3306/app", port)',
+      '`csvsql --insert --db "{{mysql://benutzer:passwort@host/datenbank}}" {{pfad/zu/datei.csv}}`',
+      '`csvsql --insert --db "{{mysql://pengguna:kata_sandi@host/basis_data}}" {{jalan/menuju/data.csv}}`',
+      'DATABASE_URL=postgres://app:{{db_password}}@db.test/app',
+      'DATABASE_URL=mysql://root:PASSWORD@db.test/app',
     ],
   },
   {
@@ -437,6 +502,7 @@ const SECRET_CASES: Case[] = [
       { text: `const apiKey = '${cat('OWzE65iZIr', 'tvsKC8rnto')}'`, value: cat('OWzE65iZIr', 'tvsKC8rnto') },
       { text: `{"client_secret": "Zx8#kL2!pQ9@vR4$"}`, value: 'Zx8#kL2!pQ9@vR4$' },
       { text: `DB_PASSWORD="s0me-Pa55word"`, value: 's0me-Pa55word' },
+      { text: `const clientSecret = "Zx8#kL2!pQ9@vR4$"`, value: 'Zx8#kL2!pQ9@vR4$' },
     ],
     negatives: [
       'password: "password"',
@@ -445,6 +511,10 @@ const SECRET_CASES: Case[] = [
       'secret = "changeme"',
       '"token": "xxxxxxxxxxxxxxxx"',
       'password: "%DB_PASSWORD%"',
+      "    apiKey: '__API_KEY__',",
+      'password: "%(db_password)s"',
+      '"api_key": "{{ secrets.API_KEY }}"',
+      "token: '<paste-token-here>'",
     ],
   },
   {
@@ -455,6 +525,9 @@ const SECRET_CASES: Case[] = [
       { text: `db_password: Tr0ub4dor&3xyz\n`, value: 'Tr0ub4dor&3xyz' },
       { text: `run --token=${cat('1e64c201a6ccba54', '93ddc9c2cb8a61df')} --verbose`, value: cat('1e64c201a6ccba54', '93ddc9c2cb8a61df') },
       { text: `export SECRET_KEY=k3J9mQ2xV7pL4nR8`, value: 'k3J9mQ2xV7pL4nR8' },
+      { text: `dbPassword: Xk9mPqLvRtZw7`, value: 'Xk9mPqLvRtZw7' },
+      { text: `SECRET_KEY=${cat('Zm9vYmFyYmF6cXV4MTIz', 'NDU2Nzg5MA==')}`, value: cat('Zm9vYmFyYmF6cXV4MTIz', 'NDU2Nzg5MA==') },
+      { text: String.raw`dotenv.parse('SERVER=localhost\nPASSWORD=Tr0ub4dor&3xyz\nDB=tests\n')`, value: 'Tr0ub4dor&3xyz' },
     ],
     negatives: [
       'const token = getToken()',
@@ -465,6 +538,18 @@ const SECRET_CASES: Case[] = [
       'pwd = /usr/local/bin',
       'password=aaaaaaaaaaaa',
       'token: 1727950000',
+      "// 'urn:ietf:params:oauth:jwk-thumbprint:sha-256:NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs'",
+      'const uri = `urn:ietf:params:OAuth:jwk-thumbprint:sha-256:${thumbprint}`',
+      '`sf force:auth:web:login --setalias {{organization}} --instanceurl {{organization_url}}`',
+      "`qm remote-migrate {{vmid}} {{target_vmid}} 'apitoken=PVEAPIToken={{user}}@{{realm}}!{{token}}={{secret}},host={{address}}' --target-bridge {{bridge}}`",
+      '      auth: options?.auth,',
+      "            string alloyDBPassword = result.Payload.Data.ToStringUtf8().TrimEnd('\\r', '\\n');",
+      " * const secret = jose.base64url.decode('Qm9sZEZha2VWYWx1ZUZvclRlc3RzT25seTEyMzQ')",
+      'declare const secret: Uint8Array',
+      '  secret: Uint8Array',
+      String.raw`    'WINDIR="C:\\\\Users\\\\me\\\\"\nAPI_KEY=secret\nPORT=3000\n',`,
+      String.raw`const RPayload = dotenv.parse(Buffer.from('SERVER=localhost\rPASSWORD=password\rDB=tests\r'))`,
+      String.raw`const RNPayload = dotenv.parse(Buffer.from('SERVER=localhost\r\nPASSWORD=password\r\nDB=tests\r\n'))`,
     ],
   },
 ]
@@ -561,6 +646,38 @@ const PII_CASES: Case[] = [
 
 const CASES = [...SECRET_CASES, ...PII_CASES]
 
+type Wrapped = { text: string; value: string; id: string; label: string }
+const ENV_FILE = cat('AWS_REGION=us-east-1\nGITHUB_TOKEN=', GHP, '\nLOG_LEVEL=debug\n')
+const SLACK_JSON = JSON.stringify({ api: 'https://api.test', token: SLACK[0] })
+const WRAPPED: Wrapped[] = [
+  { text: `echo ${b64(AKIA)} | base64 -d`, value: b64(AKIA), id: 'aws-access-key-base64', label: 'AWS_KEY' },
+  { text: `ENV_FILE=${b64(ENV_FILE)}`, value: b64(ENV_FILE), id: 'github-token-base64', label: 'GITHUB_TOKEN' },
+  { text: `{"config": "${b64(SLACK_JSON)}"}`, value: b64(SLACK_JSON), id: 'slack-token-base64', label: 'SLACK_TOKEN' },
+  { text: `data:\n  tls.key: ${b64(PEMS[0])}\n`, value: b64(PEMS[0]), id: 'private-key-base64', label: 'PRIVATE_KEY' },
+  { text: `?state=${b64(cat('db=', DB_URLS[0]), true)}&x=1`, value: b64(cat('db=', DB_URLS[0]), true), id: 'db-connection-url-base64', label: 'DB_URL' },
+  { text: `{"auths":{"registry.test":{"auth":"${b64(cat('ci:', NPM[0]))}"}}}`, value: b64(cat('ci:', NPM[0])), id: 'npm-token-base64', label: 'NPM_TOKEN' },
+]
+const WRAPPED_NEGATIVES = [
+  '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">',
+  '"integrity": "sha512-5M53BsOqcReBM10CEzSaGC4lddbxUMy9v+iLQ8GPQl2d27nb8yuN8GHr8JhtKZe3H3AIIBvsdZDfCqO8lqGa6Q=="',
+  '"integrity": "sha1-kBRmpbtS7m3mPj44UoXmkNXLpCQ="',
+  'blob: 6iji9g/bOXS4N9cXTAzcF1F5RhZEq7jDCEsKwJqtlYmyUJfjPNZYVP9wodu0PZLEAAbozl5ElVVTkFjFdxW+9nkr4wy2w4j/L+Giz4ML+Qz5vmSN/5TSr4o9cC7cec3E',
+  'nonce=CX3Idgv6Qwremr1p7Ii0x5Uq4oPUfxTYXLE0qwH_qd_7',
+  `msg: ${b64('build 4521 passed on the main branch, nothing to see here')}`,
+  `doc: ${b64(cat('aws_access_key_id = AKIA', 'IOSFODNN7EXAMPLE'))}`,
+  `cfg: ${b64('password=hunter2-Correct! and api_key=k3J9mQ2xV7pL4nR8')}`,
+  `${b64(AKIA).slice(0, 20)} is too short to decode`,
+]
+
+function seeded(seed: number): () => number {
+  return (): number => {
+    seed = (seed + 0x6d2b79f5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 function checkCase(c: Case): void {
   for (const p of c.positives) {
     const hits = scan(p.text, { pii: true })
@@ -594,6 +711,18 @@ describe('rules', () => {
       checkCase(c)
     })
   }
+
+  test(`base64-wrapped: ${WRAPPED.length} positives, ${WRAPPED_NEGATIVES.length} negatives`, ($, on) => {
+    for (const w of WRAPPED) {
+      const hits = scan(w.text, { pii: true })
+      expect(hits, `one ${w.id} hit for: ${w.text}`).toEqual([
+        { id: w.id, label: w.label, kind: 'secret', start: w.text.indexOf(w.value), end: w.text.indexOf(w.value) + w.value.length, value: w.value },
+      ])
+    }
+    for (const n of WRAPPED_NEGATIVES) {
+      expect(scan(n, { pii: true }), `base64 should not match: ${n}`).toEqual([])
+    }
+  })
 })
 
 describe('scan', () => {
@@ -610,6 +739,10 @@ describe('scan', () => {
     expect(scan(text).map((h) => h.id)).toEqual(['github-token', 'aws-access-key'])
     expect(scan(text, { off: new Set(['github-token']) }).map((h) => h.id)).toEqual(['aws-access-key'])
     expect(scan('mail jane.doe@example.com', { pii: true, off: new Set(['email']) })).toEqual([])
+    const wrapped = `raw ${AKIA} wrapped ${b64(AKIA)}`
+    expect(scan(wrapped).map((h) => h.id)).toEqual(['aws-access-key', 'aws-access-key-base64'])
+    expect(scan(wrapped, { off: new Set(['aws-access-key-base64']) }).map((h) => h.id)).toEqual(['aws-access-key'])
+    expect(scan(wrapped, { off: new Set(['aws-access-key']) })).toEqual([])
   })
 
   test('an existing placeholder is never matched again', ($, on) => {
@@ -633,20 +766,53 @@ describe('scan', () => {
     expect(sorted.map((h) => h.id)).toEqual(['github-token', 'aws-access-key'])
   })
 
-  test('2 MB of random base64 scans in under 1000 ms', ($, on) => {
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    let seed = 0x2f6b1d3a
-    const next = (): number => {
-      seed = (seed + 0x6d2b79f5) | 0
-      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  test('a whole PEM block wins over its truncated reading', ($, on) => {
+    for (const block of [PEMS[0], PEMS[1], LONG_PGP, cat(TRUNCATED[1], '\n-----END RSA ', 'PRIVATE KEY-----')]) {
+      const hits = scan(`key:\n${block}\n`)
+      expect(hits.map((h) => h.id)).toEqual(['private-key'])
+      expect(hits[0]?.value).toBe(block)
     }
+  })
+
+  test('a JWT stays a JWT, never base64-wrapped', ($, on) => {
+    const claims = b64(JSON.stringify({ sub: 'ci', gh: GHP }), true)
+    const token = cat(b64('{"alg":"HS256","typ":"JWT"}', true), '.', claims, '.', 'c2lnbmF0dXJlLW5vdC1yZWFsLTAxMjM0NQ')
+    for (const jwt of [...JWTS, token]) {
+      expect(scan(`Bearer ${jwt}`).map((h) => [h.id, h.value])).toEqual([['jwt', jwt]])
+    }
+  })
+
+  test('2 MB of random base64 scans in under 1000 ms', ($, on) => {
+    const next = seeded(0x2f6b1d3a)
     const chunks: string[] = []
-    for (let i = 0; i < 2 * 1024 * 1024; i++) chunks.push(alphabet.charAt(Math.floor(next() * 64)))
+    for (let i = 0; i < 2 * 1024 * 1024; i++) chunks.push(B64_ALPHABET.charAt(Math.floor(next() * 64)))
     const blob = chunks.join('')
     const t0 = performance.now()
     scan(blob, { pii: true })
+    const ms = performance.now() - t0
+    expect(ms).toBeLessThan(1000)
+  })
+
+  test('2 MB of near-miss keys and decodable base64 scans in under 1000 ms', ($, on) => {
+    const next = seeded(0x51ed27a9)
+    const line = (n: number): string => Array.from({ length: n }, () => B64_ALPHABET.charAt(Math.floor(next() * 64))).join('')
+    const keys: string[] = []
+    let size = 0
+    while (size < 400 * 1024) {
+      const part = cat('-----BEGIN ', 'PRIVATE KEY-----\n', Array.from({ length: 1100 }, () => line(64)).join('\n'), '\n', line(200), '\n')
+      keys.push(part)
+      size += part.length
+    }
+    const prose = Array.from({ length: 6000 }, (_, i) => String.fromCharCode(97 + (i % 26)) + (i % 7 === 0 ? ' ' : '')).join('').slice(0, 6000)
+    const runs: string[] = []
+    while (size < 2 * 1024 * 1024) {
+      const run = b64(prose)
+      runs.push(run)
+      size += run.length + 1
+    }
+    const text = keys.join('') + runs.join(' ')
+    const t0 = performance.now()
+    scan(text, { pii: true })
     const ms = performance.now() - t0
     expect(ms).toBeLessThan(1000)
   })

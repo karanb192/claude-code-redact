@@ -1,0 +1,410 @@
+{
+  "changesets/changesets|scripts/e2e/publish.test.ts|103|generic-secret-quoted": {
+    "label": "fixture",
+    "note": "fake credential in an end-to-end test"
+  },
+  "changesets/changesets|scripts/e2e/publish.test.ts|104|generic-secret-quoted": {
+    "label": "fixture",
+    "note": "fake credential in an end-to-end test"
+  },
+  "changesets/changesets|scripts/e2e/publish.test.ts|379|generic-secret-quoted": {
+    "label": "fixture",
+    "note": "fake credential in an end-to-end test"
+  },
+  "changesets/changesets|scripts/e2e/publish.test.ts|671|generic-secret": {
+    "label": "fixture",
+    "note": "fake credential in an end-to-end test"
+  },
+  "changesets/changesets|scripts/e2e/publish.test.ts|927|generic-secret": {
+    "label": "false positive",
+    "note": "code expression options?.auth"
+  },
+  "psf/requests|tests/certs/expired/ca/ca-private.key|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "psf/requests|tests/certs/expired/server/server.key|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "psf/requests|tests/certs/mtls/client/client.key|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "psf/requests|tests/certs/valid/server/server.key|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "psf/requests|tests/test_requests.py|2223|auth-header": {
+    "label": "real-shaped",
+    "note": "Basic credential for user:pass in a test assertion"
+  },
+  "psf/requests|tests/test_requests.py|2228|auth-header": {
+    "label": "real-shaped",
+    "note": "Basic credential for \"user:\" (empty password) in a test assertion"
+  },
+  "GoogleCloudPlatform/microservices-demo|src/cartservice/src/cartstore/AlloyDBCartStore.cs|40|generic-secret": {
+    "label": "false positive",
+    "note": "C# member call; the digit in Utf8 defeats the identifier filter"
+  },
+  "docker/awesome-compose|nginx-golang-postgres/backend/main.go|23|db-connection-url": {
+    "label": "false positive",
+    "note": "password slot is the %s format verb, not a value"
+  },
+  "docker/awesome-compose|react-java-mysql/backend/src/main/resources/application.properties|8|generic-secret": {
+    "label": "fixture",
+    "note": "default password of a sample app (same value as db/password.txt)"
+  },
+  "docker/awesome-compose|wasmedge-kafka-mysql/README.md|56|db-connection-url": {
+    "label": "real-shaped",
+    "note": "demo DB URL with the sample password used by the compose example"
+  },
+  "docker/awesome-compose|wasmedge-kafka-mysql/compose.yml|27|db-connection-url": {
+    "label": "real-shaped",
+    "note": "demo DB URL with the sample password used by the compose example"
+  },
+  "docker/awesome-compose|wasmedge-mysql-nginx/README.md|48|db-connection-url": {
+    "label": "real-shaped",
+    "note": "demo DB URL with the sample password used by the compose example"
+  },
+  "docker/awesome-compose|wasmedge-mysql-nginx/compose.yml|17|db-connection-url": {
+    "label": "real-shaped",
+    "note": "demo DB URL with the sample password used by the compose example"
+  },
+  "tldr-pages/tldr|pages.de/common/csvsql.md|13|db-connection-url": {
+    "label": "false positive",
+    "note": "tldr placeholder: the password slot is the translated word for \"password\""
+  },
+  "tldr-pages/tldr|pages.id/common/csvsql.md|13|db-connection-url": {
+    "label": "false positive",
+    "note": "tldr placeholder: the password slot is the translated word for \"password\""
+  },
+  "tldr-pages/tldr|pages.ko/common/sf.md|8|generic-secret": {
+    "label": "false positive",
+    "note": "CLI subcommand force:auth:web:login, matched on \"auth:\""
+  },
+  "tldr-pages/tldr|pages/common/sf.md|8|generic-secret": {
+    "label": "false positive",
+    "note": "CLI subcommand force:auth:web:login, matched on \"auth:\""
+  },
+  "tldr-pages/tldr|pages/common/wait4x-http.md|20|auth-header": {
+    "label": "fixture",
+    "note": "fake bearer token in a docs example"
+  },
+  "tldr-pages/tldr|pages/linux/qm-remote-migrate.md|8|generic-secret": {
+    "label": "false positive",
+    "note": "token type prefix; the secret itself is the {{secret}} placeholder"
+  },
+  "tldr-pages/tldr|pages/linux/qm-remote-migrate.md|12|generic-secret": {
+    "label": "false positive",
+    "note": "token type prefix; the secret itself is the {{secret}} placeholder"
+  },
+  "tldr-pages/tldr|pages/linux/qm-remote-migrate.md|16|generic-secret": {
+    "label": "false positive",
+    "note": "token type prefix; the secret itself is the {{secret}} placeholder"
+  },
+  "tldr-pages/tldr|pages/linux/qm-remote-migrate.md|20|generic-secret": {
+    "label": "false positive",
+    "note": "token type prefix; the secret itself is the {{secret}} placeholder"
+  },
+  "tldr-pages/tldr|pages/linux/qm-remote-migrate.md|24|generic-secret": {
+    "label": "false positive",
+    "note": "token type prefix; the secret itself is the {{secret}} placeholder"
+  },
+  "tldr-pages/tldr|pages/linux/qm-remote-migrate.md|28|generic-secret": {
+    "label": "false positive",
+    "note": "token type prefix; the secret itself is the {{secret}} placeholder"
+  },
+  "twbs/bootstrap|site/src/assets/search.js|17|generic-secret-quoted": {
+    "label": "false positive",
+    "note": "build-time placeholder string"
+  },
+  "auth0/node-jsonwebtoken|test/dsa-private.pem|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/ecdsa-private.pem|9|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/invalid_exp.tests.js|7|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/invalid_exp.tests.js|17|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/invalid_exp.tests.js|27|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/invalid_exp.tests.js|37|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/invalid_exp.tests.js|47|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/jwt.malicious.tests.js|22|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/jwt.malicious.tests.js|28|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/prime256v1-private.pem|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/priv.pem|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/rsa-private.pem|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/rsa-pss-invalid-salt-length-private.pem|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/rsa-pss-private.pem|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/secp384r1-private.pem|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/secp521r1-private.pem|1|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "auth0/node-jsonwebtoken|test/undefined_secretOrPublickey.tests.js|5|generic-secret-quoted": {
+    "label": "real-shaped",
+    "note": "JWT test vector caught by the quoted-secret rule (payload e30 is too short for the jwt rule)"
+  },
+  "auth0/node-jsonwebtoken|test/verify.tests.js|102|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/verify.tests.js|187|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/verify.tests.js|253|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/verify.tests.js|273|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/verify.tests.js|284|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/verify.tests.js|293|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "auth0/node-jsonwebtoken|test/wrong_alg.tests.js|13|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "panva/jose|cookbook/jwe.mjs|74|generic-secret-quoted": {
+    "label": "fixture",
+    "note": "example PBES2 password in a cookbook test vector"
+  },
+  "panva/jose|docs/jwk/embedded/functions/EmbeddedJWK.md|33|jwt": {
+    "label": "real-shaped",
+    "note": "signed JWT in a usage example"
+  },
+  "panva/jose|docs/jwk/thumbprint/functions/calculateJwkThumbprintUri.md|36|generic-secret": {
+    "label": "false positive",
+    "note": "JWK thumbprint URN (a public key hash), matched on \"auth:\" inside \"oauth:\""
+  },
+  "panva/jose|docs/jwt/decrypt/functions/jwtDecrypt.md|37|generic-secret": {
+    "label": "false positive",
+    "note": "function call name, not the value"
+  },
+  "panva/jose|docs/jwt/encrypt/classes/EncryptJWT.md|15|generic-secret": {
+    "label": "false positive",
+    "note": "function call name, not the value"
+  },
+  "panva/jose|docs/jwt/sign/classes/SignJWT.md|37|private-key": {
+    "label": "real-shaped",
+    "note": "complete PKCS #8 key in a usage example in docs or a doc comment"
+  },
+  "panva/jose|docs/jwt/verify/functions/jwtVerify.md|43|jwt": {
+    "label": "real-shaped",
+    "note": "signed JWT in a usage example"
+  },
+  "panva/jose|docs/jwt/verify/functions/jwtVerify.md|69|jwt": {
+    "label": "real-shaped",
+    "note": "signed JWT in a usage example"
+  },
+  "panva/jose|docs/jwt/verify/functions/jwtVerify.md|91|jwt": {
+    "label": "real-shaped",
+    "note": "signed JWT in a usage example"
+  },
+  "panva/jose|docs/key/import/functions/importPKCS8.md|34|private-key": {
+    "label": "real-shaped",
+    "note": "complete PKCS #8 key in a usage example in docs or a doc comment"
+  },
+  "panva/jose|src/jwk/embedded.ts|25|jwt": {
+    "label": "real-shaped",
+    "note": "signed JWT in a usage example"
+  },
+  "panva/jose|src/jwk/thumbprint.ts|131|generic-secret": {
+    "label": "false positive",
+    "note": "JWK thumbprint URN (a public key hash), matched on \"auth:\" inside \"oauth:\""
+  },
+  "panva/jose|src/jwk/thumbprint.ts|146|generic-secret": {
+    "label": "false positive",
+    "note": "JWK thumbprint URN (a public key hash), matched on \"auth:\" inside \"oauth:\""
+  },
+  "panva/jose|src/jwt/decrypt.ts|41|generic-secret": {
+    "label": "false positive",
+    "note": "function call name, not the value"
+  },
+  "panva/jose|src/jwt/encrypt.ts|25|generic-secret": {
+    "label": "false positive",
+    "note": "function call name, not the value"
+  },
+  "panva/jose|src/jwt/sign.ts|49|private-key": {
+    "label": "real-shaped",
+    "note": "complete PKCS #8 key in a usage example in docs or a doc comment"
+  },
+  "panva/jose|src/jwt/verify.ts|48|jwt": {
+    "label": "real-shaped",
+    "note": "signed JWT in a usage example"
+  },
+  "panva/jose|src/jwt/verify.ts|76|jwt": {
+    "label": "real-shaped",
+    "note": "signed JWT in a usage example"
+  },
+  "panva/jose|src/jwt/verify.ts|100|jwt": {
+    "label": "real-shaped",
+    "note": "signed JWT in a usage example"
+  },
+  "panva/jose|src/key/import.ts|131|private-key": {
+    "label": "real-shaped",
+    "note": "complete PKCS #8 key in a usage example in docs or a doc comment"
+  },
+  "panva/jose|tap/fixtures.ts|10|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|tap/fixtures.ts|39|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|tap/fixtures.ts|68|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|tap/fixtures.ts|100|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|tap/fixtures.ts|141|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|tap/fixtures.ts|205|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|tap/fixtures.ts|221|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|tap/fixtures.ts|264|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|tap/fixtures.ts|321|private-key": {
+    "label": "real-shaped",
+    "note": "complete PEM private key committed as a test fixture"
+  },
+  "panva/jose|test-d/api.ts|15|generic-secret": {
+    "label": "false positive",
+    "note": "TypeScript type annotation"
+  },
+  "panva/jose|test/jwk/thumbprint.test.ts|96|generic-secret": {
+    "label": "false positive",
+    "note": "JWK thumbprint URN (a public key hash), matched on \"auth:\" inside \"oauth:\""
+  },
+  "panva/jose|test/jwk/thumbprint.test.ts|100|generic-secret": {
+    "label": "false positive",
+    "note": "JWK thumbprint URN (a public key hash), matched on \"auth:\" inside \"oauth:\""
+  },
+  "panva/jose|test/jwk/thumbprint.test.ts|104|generic-secret": {
+    "label": "false positive",
+    "note": "JWK thumbprint URN (a public key hash), matched on \"auth:\" inside \"oauth:\""
+  },
+  "panva/jose|test/jwk/thumbprint.test.ts|108|generic-secret": {
+    "label": "false positive",
+    "note": "JWK thumbprint URN (a public key hash), matched on \"auth:\" inside \"oauth:\""
+  },
+  "panva/jose|test/jwt/encrypt.test.ts|10|generic-secret": {
+    "label": "false positive",
+    "note": "TypeScript type annotation"
+  },
+  "panva/jose|test/jwt/sign.test.ts|24|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "panva/jose|test/jwt/sign.test.ts|35|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "panva/jose|test/jwt/unsecured.test.ts|19|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "panva/jose|test/jwt/unsecured.test.ts|39|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "panva/jose|test/util/decode_jwt.test.ts|7|jwt": {
+    "label": "real-shaped",
+    "note": "JWT test vector"
+  },
+  "motdotla/dotenv|README.md|127|private-key": {
+    "label": "fixture",
+    "note": "docs PEM with an elided body (Kh9NV... between ellipses), not a working key"
+  },
+  "motdotla/dotenv|tests/test-parse-fast.js|76|generic-secret": {
+    "label": "false positive",
+    "note": "the value is the word \"secret\" or \"password\" (which the rules treat as non-secret); the hit exists only because the match runs across a literal \\r or \\n escape into the next variable"
+  },
+  "motdotla/dotenv|tests/test-parse-multiline.js|64|generic-secret": {
+    "label": "false positive",
+    "note": "the value is the word \"secret\" or \"password\" (which the rules treat as non-secret); the hit exists only because the match runs across a literal \\r or \\n escape into the next variable"
+  },
+  "motdotla/dotenv|tests/test-parse-multiline.js|67|generic-secret": {
+    "label": "false positive",
+    "note": "the value is the word \"secret\" or \"password\" (which the rules treat as non-secret); the hit exists only because the match runs across a literal \\r or \\n escape into the next variable"
+  },
+  "motdotla/dotenv|tests/test-parse-multiline.js|70|generic-secret": {
+    "label": "false positive",
+    "note": "the value is the word \"secret\" or \"password\" (which the rules treat as non-secret); the hit exists only because the match runs across a literal \\r or \\n escape into the next variable"
+  },
+  "motdotla/dotenv|tests/test-parse.js|90|generic-secret": {
+    "label": "false positive",
+    "note": "the value is the word \"secret\" or \"password\" (which the rules treat as non-secret); the hit exists only because the match runs across a literal \\r or \\n escape into the next variable"
+  },
+  "motdotla/dotenv|tests/test-parse.js|93|generic-secret": {
+    "label": "false positive",
+    "note": "the value is the word \"secret\" or \"password\" (which the rules treat as non-secret); the hit exists only because the match runs across a literal \\r or \\n escape into the next variable"
+  },
+  "motdotla/dotenv|tests/test-parse.js|96|generic-secret": {
+    "label": "false positive",
+    "note": "the value is the word \"secret\" or \"password\" (which the rules treat as non-secret); the hit exists only because the match runs across a literal \\r or \\n escape into the next variable"
+  }
+}

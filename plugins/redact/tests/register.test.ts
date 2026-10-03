@@ -23,12 +23,12 @@ describe('register', () => {
 
   test('/redact says nothing was hidden in a fresh session, secrets only', async ($, on) => {
     on('ui.log', () => ({ value: undefined }))
-    expect((await $.command.run(run)).text).toBe('redact: nothing hidden yet this session. Scanning secrets only (set pii to true for email, phone, cards, national ids).')
+    expect((await $.command.run(run)).text).toBe('nothing hidden yet this session. Scanning secrets only (set pii to true for email, phone, cards, national ids).')
   })
 
   test('/redact names PII scanning when the option is on', { options: { pii: true } }, async ($, on) => {
     on('ui.log', () => ({ value: undefined }))
-    expect((await $.command.run(run)).text).toBe('redact: nothing hidden yet this session. Scanning secrets and PII.')
+    expect((await $.command.run(run)).text).toBe('nothing hidden yet this session. Scanning secrets and PII.')
   })
 
   test('Edit, Write and NotebookEdit pass through unchanged when no placeholder is known', async ($, on) => {
@@ -40,7 +40,7 @@ describe('register', () => {
     await $.tool.call({ tool: 'Write', file_path: '/work/x', content: `C=${UNKNOWN}` })
     await $.tool.call({ tool: 'NotebookEdit', notebook_path: '/work/n.ipynb', new_source: `D=${UNKNOWN}` })
     expect(seen).toEqual([`A=${UNKNOWN}`, `B=${UNKNOWN}`, `C=${UNKNOWN}`, `D=${UNKNOWN}`])
-    expect((await $.command.run(run)).text).toMatch(/^redact: nothing hidden yet/)
+    expect((await $.command.run(run)).text).toMatch(/^nothing hidden yet/)
   })
 
   test('Bash is never touched', async ($, on) => {
@@ -87,7 +87,7 @@ describe('prompt.submit', () => {
     const { sent, lines } = submitStub(on)
     await $.prompt.submit({ text: `my key is ${KEY} keep it`, origin: { kind: 'composer' }, wait: false })
     expect(sent).toEqual([expect.stringMatching(/^my key is \[REDACTED:AWS_KEY#[0-9a-f]{8}\] keep it$/)])
-    expect(lines).toEqual(['redact: hid 1 AWS_KEY in your prompt'])
+    expect(lines).toEqual(['hid 1 AWS_KEY in your prompt'])
   })
 
   test('a clean prompt passes through as the same text with no line', async ($, on) => {
@@ -111,7 +111,7 @@ describe('prompt.submit', () => {
     expect(edits).toEqual([`SECRET=${KEY}`, `# moved\nSECRET=${KEY}`])
     expect(shells).toEqual([`echo ${p}`])
     expect((await $.command.run({ command: 'redact', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })).text)
-      .toBe('redact: hid 1 values this session (1 AWS_KEY); restored 2 placeholders inside Edit, Write and NotebookEdit arguments. Scanning secrets only (set pii to true for email, phone, cards, national ids).')
+      .toBe('hid 1 values this session (1 AWS_KEY); restored 2 placeholders inside Edit, Write and NotebookEdit arguments. Scanning secrets only (set pii to true for email, phone, cards, national ids).')
   })
 
   test('with pii on, an email in the prompt is hidden; off by default', { options: { pii: true } }, async ($, on) => {

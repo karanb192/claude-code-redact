@@ -7,6 +7,8 @@ export type Rule = {
   pattern: RegExp
   group?: number
   verify?: (value: string) => boolean
+  // sees the text and the match start, for context a regex without lookbehind cannot check
+  before?: (text: string, at: number) => boolean
   source: string
 }
 
@@ -141,21 +143,59 @@ function notFiller(v: string): boolean {
   return entropy(v) >= 2.5 && !/x{6,}|X{6,}|0{8,}|EXAMPLE/.test(v)
 }
 
+// template and build-time slots: {{secret}}, <token>, __API_KEY__, %s, and a bare `Name=` cut off before its value
+function placeholderShaped(v: string): boolean {
+  return /^(?:\{\{|<|__|%)|(?:\}\}|>|__)$|^[A-Za-z_]+=$/.test(v)
+}
+
 function quotedSecret(v: string): boolean {
   // lowercase words joined by - _ . with no digit read as enum values ('same-origin', 'github_webhook')
-  return plausibleSecret(v) && entropy(v) >= 2.0 && !/^[a-z]+(?:[-_.][a-z]*)+$/.test(v)
+  return plausibleSecret(v) && !placeholderShaped(v) && entropy(v) >= 2.0 && !/^[a-z]+(?:[-_.][a-z]*)+$/.test(v)
+}
+
+function codeIdentifier(v: string): boolean {
+  const digits = v.replace(/\D/g, '').length
+  const upper = v.replace(/[^A-Z]/g, '').length
+  const letters = v.replace(/[^A-Za-z]/g, '').length
+  // word humps (Uint8Array, ToStringUtf8) keep capitals sparse; random strings are about half capitals
+  return /^[A-Za-z][A-Za-z0-9]*$/.test(v) && digits <= 2 && upper > 0 && upper * 3 <= letters
+}
+
+function codeExpression(v: string): boolean {
+  if (v.includes('?.') || codeIdentifier(v)) return true
+  // a member chain (jose.base64url.decode, result.Payload.Data.ToStringUtf8) whose parts read as names, not
+  // a dotted token whose parts are digit-heavy
+  const parts = v.split('.')
+  return parts.length > 1 && parts.every((p) => /^[A-Za-z_$][\w$]*$/.test(p) && p.replace(/\D/g, '').length <= 2)
 }
 
 function bareSecret(v: string): boolean {
-  if (!plausibleSecret(v) || entropy(v) < 3.0) return false
+  if (!plausibleSecret(v) || placeholderShaped(v) || entropy(v) < 3.0) return false
   // a code identifier or member chain with no digit (getToken, process.env.KEY, my-secret-name) is not a value
   if (!/\d/.test(v) && /^[A-Za-z_$][\w$]*(?:[.\-][A-Za-z_$][\w$]*)*$/.test(v)) return false
-  return true
+  return !codeExpression(v)
+}
+
+function keywordStart(text: string, at: number): boolean {
+  if (at === 0) return true
+  const prev = text.charAt(at - 1)
+  if (prev === ':') return false
+  if (!/[A-Za-z0-9]/.test(prev) || /\\[nrt]$/.test(text.slice(Math.max(0, at - 2), at))) return true
+  // inside a word only a camelCase hump counts (dbPassword, clientSecret), never the auth of OAuth
+  return /^[A-Z][a-z]/.test(text.slice(at, at + 2)) && !(/o/i.test(prev) && /^auth/i.test(text.slice(at, at + 4)))
 }
 
 function dbUrlHasRealPassword(url: string): boolean {
   const password = /^[^:]+:\/\/[^:@\/]*:([^@\/]*)@/.exec(url)?.[1] ?? ''
-  return password.length > 0 && plausibleSecret(password) && !/^(?:pass|pwd|secret)$/i.test(password)
+  return (
+    password.length > 0 &&
+    plausibleSecret(password) &&
+    !/^(?:pass|pwd|secret|password|%[sd]|\{\{.*\}\}|<.*>)$/i.test(password)
+  )
+}
+
+function notTemplated(text: string, at: number): boolean {
+  return text.slice(Math.max(0, at - 2), at) !== '{{'
 }
 
 const FILE_TLDS = new Set([
@@ -347,8 +387,17 @@ export const RULES: readonly Rule[] = [
     label: 'PRIVATE_KEY',
     kind: 'secret',
     // the body never holds five dashes, so a BEGIN without an END stops at the next marker instead of scanning 16 KB
-    pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----(?:[^-]|-{1,4}(?!-)){16,16384}?-----END (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----/g,
+    pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----(?:[^-]|-{1,4}(?!-)){16,65536}?-----END (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----/g,
     source: GITLEAKS,
+  },
+  {
+    id: 'private-key-truncated',
+    label: 'PRIVATE_KEY',
+    kind: 'secret',
+    // a key cut off before its END line; separators may be real or JSON-escaped newlines, lines may be indented.
+    // The base64 class has no newline, backslash or space, so each line can split only one way.
+    pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----[ \t]{0,16}(?:(?:\r?\n|\\r\\n|\\n)[ \t]{0,16}[A-Za-z][A-Za-z0-9-]{0,63}:[ \t][^\r\n\\]{0,256}){0,8}(?:(?:\r?\n|\\r\\n|\\n)[ \t]{0,16}(?=\r?\n|\\r\\n|\\n))?(?:(?:\r?\n|\\r\\n|\\n)[ \t]{0,16}[A-Za-z0-9+\/=]{16,128}){2,2048}(?![A-Za-z0-9+\/=])/g,
+    source: 'https://www.rfc-editor.org/rfc/rfc7468',
   },
   {
     id: 'db-connection-url',
@@ -356,6 +405,7 @@ export const RULES: readonly Rule[] = [
     kind: 'secret',
     pattern: /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|rediss?|amqps?):\/\/[^\s:@\/'"`<>]{0,128}:[^\s@\/'"`<>]{1,256}@[^\s\/'"`<>?#@(){}\[\],;]{1,256}(?:[\/?#][^\s'"`<>(){}\[\],;]{0,1024})?/gi,
     verify: dbUrlHasRealPassword,
+    before: notTemplated,
     source: GITHUB_PATTERNS,
   },
   {
@@ -374,15 +424,18 @@ export const RULES: readonly Rule[] = [
     pattern: /(?:api[_-]?key|secret(?:[_-]?key)?|token|password|passwd|pwd|auth|credential)s?["'`]?[ \t]{0,5}(?::=|=>|[=:])[ \t]{0,5}["'`]([^\s"'`]{8,256})["'`]/gi,
     group: 1,
     verify: quotedSecret,
+    before: keywordStart,
     source: GITLEAKS,
   },
   {
     id: 'generic-secret',
     label: 'SECRET',
     kind: 'secret',
-    pattern: /(?:api[_-]?key|secret(?:[_-]?key)?|token|password|passwd|pwd|auth|credential)s?["'`]?[ \t]{0,5}(?::=|=>|[=:])[ \t]{0,5}([^\s"'`;,(){}<>\[\]]{8,256})(?![^\s"'`;,(){}<>\[\]])/gi,
+    // a literal \n, \r or \t (backslash and letter) ends the value, as in a dotenv string inside source code
+    pattern: /(?:api[_-]?key|secret(?:[_-]?key)?|token|password|passwd|pwd|auth|credential)s?["'`]?[ \t]{0,5}(?::=|=>|[=:])[ \t]{0,5}((?:[^\s"'`;,(){}<>\[\]\\]|\\(?![nrt])){8,256})(?!(?!\\[nrt])[^\s"'`;,(){}<>\[\]])/gi,
     group: 1,
     verify: bareSecret,
+    before: keywordStart,
     source: GITLEAKS,
   },
   {
@@ -468,6 +521,98 @@ function compile(pattern: RegExp): Compiled {
 
 type Ranked = Hit & { order: number }
 
+// Rules anchored on a fixed prefix or marker. Only these run on decoded base64: the generic and PII rules
+// would fire on arbitrary decoded prose.
+const WRAPPABLE = new Set([
+  'aws-access-key', 'github-token', 'gitlab-pat', 'slack-token', 'slack-webhook', 'stripe-live-key', 'sendgrid-key',
+  'twilio-key', 'google-api-key', 'google-oauth-secret', 'anthropic-key', 'openai-key', 'huggingface-token',
+  'npm-token', 'pypi-token', 'private-key', 'private-key-truncated', 'db-connection-url', 'jwt',
+])
+const B64_MIN = 24
+const B64_MAX = 8192
+const B64_RUNS = 200
+
+const B64_VALUE = new Int8Array(128).fill(-1)
+for (let i = 0; i < 64; i++) B64_VALUE[B64URL.charCodeAt(i)] = i
+B64_VALUE[43] = 62
+B64_VALUE[47] = 63
+
+function b64Value(code: number): number {
+  return code < 128 ? B64_VALUE[code]! : -1
+}
+
+// Maximal runs of the base64 alphabet (standard or url-safe, never mixed) with optional padding.
+// Padded or standard runs must be a multiple of 4 long; unpadded url-safe runs only need a valid tail.
+function base64Runs(text: string): [number, number][] {
+  const runs: [number, number][] = []
+  let i = 0
+  while (i < text.length && runs.length < B64_RUNS) {
+    if (b64Value(text.charCodeAt(i)) < 0) {
+      i++
+      continue
+    }
+    let j = i
+    let std = false
+    let url = false
+    for (; j < text.length; j++) {
+      const c = text.charCodeAt(j)
+      if (b64Value(c) < 0) break
+      if (c === 43 || c === 47) std = true
+      else if (c === 45 || c === 95) url = true
+    }
+    let k = j
+    while (k < text.length && k - j < 2 && text.charCodeAt(k) === 61) k++
+    const body = j - i
+    const total = k - i
+    const shaped = k > j ? total % 4 === 0 : body % 4 === 0 || (!std && body % 4 !== 1)
+    if (total >= B64_MIN && total <= B64_MAX && !(std && url) && shaped) runs.push([i, k])
+    i = k
+  }
+  return runs
+}
+
+// Decodes text[start, end) to a byte string, or null once more than a tenth of the bytes are not printable ASCII.
+function decodePrintable(text: string, start: number, end: number): string | null {
+  let stop = end
+  while (stop > start && text.charCodeAt(stop - 1) === 61) stop--
+  const maxBad = Math.floor(((stop - start) * 3) / 40)
+  let bad = 0
+  let acc = 0
+  let bits = 0
+  let out = ''
+  for (let i = start; i < stop; i++) {
+    acc = ((acc << 6) | b64Value(text.charCodeAt(i))) & 0xffffff
+    bits += 6
+    if (bits >= 8) {
+      bits -= 8
+      const byte = (acc >> bits) & 0xff
+      if (!(byte >= 0x20 && byte <= 0x7e) && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d && ++bad > maxBad) return null
+      out += String.fromCharCode(byte)
+    }
+  }
+  return out
+}
+
+function firstWrappedRule(decoded: string, off: ReadonlySet<string> | undefined): number {
+  for (let order = 0; order < RULES.length; order++) {
+    const rule = RULES[order]!
+    if (!WRAPPABLE.has(rule.id) || off?.has(rule.id) || off?.has(`${rule.id}-base64`)) continue
+    const { re } = compile(rule.pattern)
+    const g = rule.group ?? 0
+    re.lastIndex = 0
+    for (let m = re.exec(decoded); m !== null; m = re.exec(decoded)) {
+      const raw = m[g]
+      if (raw && (!rule.before || rule.before(decoded, m.index)) && (!rule.verify || rule.verify(raw))) {
+        re.lastIndex = 0
+        return order
+      }
+      re.lastIndex = m.index + 1
+    }
+    re.lastIndex = 0
+  }
+  return -1
+}
+
 export function scan(text: string, opts: { pii?: boolean; off?: ReadonlySet<string> } = {}): Hit[] {
   const spans: [number, number][] = []
   PLACEHOLDER.lastIndex = 0
@@ -505,7 +650,7 @@ export function scan(text: string, opts: { pii?: boolean; off?: ReadonlySet<stri
       const end = start + raw.length
       const value = text.slice(start, end)
       const inPlaceholder = spans.some(([s, e]) => start < e && end > s)
-      if (inPlaceholder || (rule.verify && !rule.verify(value))) {
+      if (inPlaceholder || (rule.before && !rule.before(masked, m.index)) || (rule.verify && !rule.verify(value))) {
         re.lastIndex = m.index + 1
         continue
       }
@@ -513,6 +658,16 @@ export function scan(text: string, opts: { pii?: boolean; off?: ReadonlySet<stri
     }
     re.lastIndex = 0
   })
+
+  // one bounded decode pass: a base64 run whose decoded text trips a prefix rule is redacted whole
+  for (const [start, end] of base64Runs(masked)) {
+    const decoded = decodePrintable(masked, start, end)
+    if (decoded === null) continue
+    const order = firstWrappedRule(decoded, opts.off)
+    if (order < 0) continue
+    const rule = RULES[order]!
+    found.push({ id: `${rule.id}-base64`, label: rule.label, kind: rule.kind, start, end, value: text.slice(start, end), order })
+  }
 
   found.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start) || a.order - b.order)
   const hits: Hit[] = []

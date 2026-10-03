@@ -4,27 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>redact for Claude Code</title>
+<meta name="description" content="A Claude Code mod that swaps secrets and PII for placeholders before the model reads them, keeps file edits working, and never leaves the machine.">
+<link rel="canonical" href="https://redact.aidojo.si/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="redact for Claude Code">
+<meta property="og:description" content="Secrets and PII become placeholders before Claude reads them. Edits still work. Nothing leaves the machine.">
+<meta property="og:url" content="https://redact.aidojo.si/">
+<meta property="og:image" content="https://redact.aidojo.si/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="redact for Claude Code">
+<meta name="twitter:description" content="Secrets and PII become placeholders before Claude reads them. Edits still work. Nothing leaves the machine.">
+<meta name="twitter:image" content="https://redact.aidojo.si/social-preview.png">
 <meta name="description" content="A Claude Code mod that swaps secrets and opt-in PII for placeholders before the model reads them and before the session file keeps them. No network, no processes, no model call.">
 <style>
 :root {
   --bg: #FAF9F5;
   --bg-alt: #F0EEE6;
   --text: #141413;
-  --muted: #5E5D59;
+  --muted: #3D3D3A;
   --faint: #87867F;
   --accent: #D97757;
-  --accent-hover: #CC785C;
+  --accent-hover: #C6613F;
   --kraft: #D4A27F;
   --manilla: #EBDBBC;
   --panel: #F0EEE6;
   --panel-warm: #F5ECDA;
-  --line: #E3DFD3;
+  --line: #E8E6DC;
   --code-bg: #141413;
   --code-text: #F0EEE6;
   --code-dim: #87867F;
   --on-accent: #FAF9F5;
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Anthropic Serif", "Tiempos Text", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --sans: "Styrene B", "Styrene A", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: light;
 }
@@ -209,7 +220,7 @@ footer a:hover { text-decoration: underline; }
       <div class="card">
         <h3>Edits get the real value</h3>
         <p>Placeholders are swapped back only inside <code>Edit</code>, <code>Write</code> and <code>NotebookEdit</code> arguments, so an edit to a line that held a key still matches the file. <code>Bash</code> never gets the real value.</p>
-        <p class="note">Kit tests cover the argument rewrite. A live edit in a logged-in session has not been run yet.</p>
+        <p class="note">Driven live on 2.1.288: a key typed in the prompt, Claude asked to save it, the file on disk holds the real key while every conversation row holds the placeholder.</p>
       </div>
       <div class="card">
         <h3>The transcript is clean too</h3>
@@ -222,10 +233,10 @@ footer a:hover { text-decoration: underline; }
 <section id="catches">
   <div class="wrap">
     <h2>What it catches</h2>
-    <p class="muted">30 rules. Each one has a fake example and a public source in <a href="https://github.com/karanb192/claude-code-redact/blob/main/plugins/redact/RULES.md">RULES.md</a>. Any rule can be switched off by id.</p>
+    <p class="muted">31 rules. Each one has a fake example and a public source in <a href="https://github.com/karanb192/claude-code-redact/blob/main/plugins/redact/RULES.md">RULES.md</a>. Any rule can be switched off by id.</p>
     <div class="catch">
       <div class="group secrets">
-        <h3>Secrets <span class="tag">always on, 23 rules</span></h3>
+        <h3>Secrets <span class="tag">always on, 24 rules</span></h3>
         <ul>
           <li>AWS access key ids and secret access keys</li>
           <li>GitHub, GitLab, npm, PyPI and Hugging Face tokens</li>
@@ -235,10 +246,11 @@ footer a:hover { text-decoration: underline; }
           <li>Anthropic and OpenAI keys</li>
           <li>Azure storage account keys</li>
           <li>JWTs (header must decode to JSON with <code>alg</code>)</li>
-          <li>PEM private key blocks</li>
+          <li>PEM private key blocks, complete or truncated</li>
           <li>Database URLs that carry a password</li>
           <li><code>Authorization</code> header values</li>
           <li>Generic <code>password=</code>, <code>api_key=</code> style values with enough entropy</li>
+        <li>Any prefix-shaped token above wrapped in base64</li>
         </ul>
       </div>
       <div class="group pii">
@@ -262,7 +274,8 @@ footer a:hover { text-decoration: underline; }
   <div class="wrap">
     <h2>What it does not do</h2>
     <ul class="nots">
-      <li><strong>Two bookkeeping records keep the typed prompt.</strong> The <code>queue-operation</code> record and a command's <code>args</code> stamp are stored as made. In the headless run both still held the typed text. Neither is sent to the model.</li>
+      <li><strong>Three host bookkeeping records are stored as made.</strong> The <code>toolUseResult</code> record of a file write keeps the content as written, a command's <code>args</code> stamp keeps the typed arguments, and in headless <code>claude -p</code> the <code>queue-operation</code> record keeps the typed prompt. None of them is sent to the model.</li>
+      <li><strong>Tool call blocks are not rewritable.</strong> The engine puts the model's own tool call blocks back as made; only text and tool results can be rewritten. The model only ever sees placeholders.</li>
       <li><strong>Unknown formats pass.</strong> A secret the rules do not know stays visible. <code>password=hunter2</code> is caught, <code>token=abc</code> is not.</li>
       <li><strong>Split or partial secrets pass.</strong> A key across two rows, or only its last four characters, is not caught.</li>
       <li><strong>Images are not scanned.</strong> A screenshot of a key goes through.</li>
