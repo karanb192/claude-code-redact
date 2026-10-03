@@ -1,0 +1,4 @@
+{
+  "description": "redact: prompt.submit, session.append, tool.call{tool=Edit|Write|NotebookEdit}, prompt.section{name=env_info_simple}, session.start, command.run{command=redact}",
+  "modules": ["./register.ts"]
+}
